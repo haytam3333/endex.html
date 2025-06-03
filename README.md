@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Login Page with Protected Log</title>
+  <title>Secure Login with Admin Log Control</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,7 +12,6 @@
       align-items: center;
       height: 100vh;
     }
-
     .login-box {
       background: #fff;
       padding: 30px;
@@ -20,41 +19,31 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       width: 320px;
     }
-
-    input {
+    input, button {
       width: 100%;
       padding: 10px;
       margin: 10px 0;
     }
-
     button {
-      padding: 10px;
-      width: 100%;
-      margin-top: 10px;
-      background: #3498db;
-      color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      color: #fff;
     }
-
-    button:hover {
-      background: #2980b9;
-    }
-
-    .clear-btn { background-color: #e74c3c; }
-    .clear-btn:hover { background-color: #c0392b; }
-
-    .download-btn { background-color: #2ecc71; }
-    .download-btn:hover { background-color: #27ae60; }
-
-    .log-btn { background-color: #9b59b6; }
-    .log-btn:hover { background-color: #8e44ad; }
+    .btn-login { background: #3498db; }
+    .btn-login:hover { background: #2980b9; }
+    .btn-show { background: #9b59b6; }
+    .btn-show:hover { background: #8e44ad; }
+    .btn-download { background: #2ecc71; }
+    .btn-download:hover { background: #27ae60; }
+    .btn-clear { background: #e74c3c; }
+    .btn-clear:hover { background: #c0392b; }
 
     .message {
-      margin-top: 10px;
       font-weight: bold;
     }
+    .success { color: green; }
+    .fail { color: red; }
 
     .log-list {
       display: none;
@@ -66,139 +55,133 @@
       padding: 10px;
       border-radius: 5px;
     }
-
     .log-entry {
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 6px;
+      margin-bottom: 6px;
       font-size: 14px;
     }
-
-    .success { color: green; }
-    .fail { color: red; }
   </style>
 </head>
 <body>
 
 <div class="login-box">
   <h2>Login</h2>
-  <input type="email" id="email" placeholder="Enter email" required>
-  <input type="password" id="password" placeholder="Enter password" required>
-  <button onclick="login()">Log In</button>
+  <input type="email" id="email" placeholder="Email" required>
+  <input type="password" id="password" placeholder="Password" required>
+  <button class="btn-login" onclick="login()">Log In</button>
   <div class="message" id="message"></div>
 
-  <div class="log-list" id="log-list">
-    <h4>User Login Log:</h4>
-    <!-- Logs will be displayed here -->
-  </div>
+  <button class="btn-show" onclick="showLogs()">Show Logs (Admin)</button>
+  <button class="btn-download" onclick="downloadLog()">Download Log</button>
+  <button class="btn-clear" onclick="clearLog()">Clear Log</button>
 
-  <button class="log-btn" onclick="showLogs()">Show Log (Admin)</button>
-  <button class="clear-btn" onclick="clearLog()">Clear Log</button>
-  <button class="download-btn" onclick="downloadLog()">Download Log</button>
+  <div class="log-list" id="log-list">
+    <h4>Login History:</h4>
+  </div>
 </div>
 
 <script>
   const correctEmail = "user@example.com";
   const correctPassword = "123456";
-  const adminPassword = "admin123"; // <- Change this to your secret
-
-  let logsLoaded = false;
+  const adminPassword = "admin123";  // change this to your own secret
+  let logsVisible = false;
 
   function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const isSuccess = email === correctEmail && password === correctPassword;
 
-    const isValid = email === correctEmail && password === correctPassword;
-    const status = isValid ? "✅ Success" : "❌ Failed";
-
-    const logEntry = {
+    const log = {
       email,
       password,
-      status,
+      status: isSuccess ? "✅ Success" : "❌ Fail",
       timestamp: new Date().toLocaleString()
     };
 
-    let logs = JSON.parse(localStorage.getItem("loginLogs")) || [];
-    logs.push(logEntry);
+    const logs = JSON.parse(localStorage.getItem("loginLogs")) || [];
+    logs.push(log);
     localStorage.setItem("loginLogs", JSON.stringify(logs));
 
-    const message = document.getElementById("message");
-    message.textContent = isValid ? "Login successful!" : "Invalid email or password.";
-    message.className = isValid ? "message success" : "message fail";
+    const msg = document.getElementById("message");
+    msg.textContent = isSuccess ? "Login Successful" : "Incorrect Email or Password";
+    msg.className = "message " + (isSuccess ? "success" : "fail");
 
-    if (logsLoaded) {
-      displayLog(logEntry);
-    }
+    if (logsVisible) displayLog(log);
 
-    document.getElementById('email').value = "";
-    document.getElementById('password').value = "";
+    document.getElementById("email").value = "";
+    document.getElementById("password").value = "";
   }
 
-  function displayLog(entry) {
+  function displayLog(log) {
     const logList = document.getElementById("log-list");
     const div = document.createElement("div");
-    div.classList.add("log-entry");
+    div.className = "log-entry";
     div.innerHTML = `
-      <strong>Status:</strong> ${entry.status}<br>
-      <strong>Email:</strong> ${entry.email}<br>
-      <strong>Password:</strong> ${entry.password}<br>
-      <strong>Time:</strong> ${entry.timestamp}
+      <strong>${log.status}</strong><br>
+      Email: ${log.email}<br>
+      Password: ${log.password}<br>
+      Time: ${log.timestamp}
     `;
     logList.appendChild(div);
   }
 
   function showLogs() {
-    const entered = prompt("Enter admin password to view logs:");
-    if (entered === adminPassword) {
-      const logList = document.getElementById("log-list");
-      logList.style.display = "block";
-      if (!logsLoaded) {
-        const savedLogs = JSON.parse(localStorage.getItem("loginLogs")) || [];
-        savedLogs.forEach(entry => displayLog(entry));
-        logsLoaded = true;
-      }
-    } else {
-      alert("Incorrect password. Access denied.");
+    const input = prompt("Enter admin password:");
+    if (input !== adminPassword) {
+      alert("Access Denied.");
+      return;
     }
+
+    const logList = document.getElementById("log-list");
+    if (!logsVisible) {
+      const logs = JSON.parse(localStorage.getItem("loginLogs")) || [];
+      logList.innerHTML = "<h4>Login History:</h4>"; // Clear then add
+      logs.forEach(displayLog);
+    }
+
+    logList.style.display = "block";
+    logsVisible = true;
   }
 
   function clearLog() {
+    const input = prompt("Admin password to clear log:");
+    if (input !== adminPassword) {
+      alert("Access Denied.");
+      return;
+    }
+
     localStorage.removeItem("loginLogs");
-    document.getElementById("log-list").innerHTML = "<h4>User Login Log:</h4>";
-    document.getElementById("message").textContent = "Log cleared.";
-    document.getElementById("message").className = "message";
-    logsLoaded = false;
+    document.getElementById("log-list").innerHTML = "<h4>Login History:</h4>";
     document.getElementById("log-list").style.display = "none";
+    logsVisible = false;
+    alert("Logs cleared.");
   }
 
   function downloadLog() {
     const logs = JSON.parse(localStorage.getItem("loginLogs")) || [];
     if (logs.length === 0) {
-      alert("No log to download.");
+      alert("No log available.");
       return;
     }
 
     let content = "User Login Log\n\n";
-    logs.forEach((entry, i) => {
+    logs.forEach((log, i) => {
       content += `Entry ${i + 1}:\n`;
-      content += `Status: ${entry.status}\n`;
-      content += `Email: ${entry.email}\n`;
-      content += `Password: ${entry.password}\n`;
-      content += `Time: ${entry.timestamp}\n\n`;
+      content += `Status: ${log.status}\n`;
+      content += `Email: ${log.email}\n`;
+      content += `Password: ${log.password}\n`;
+      content += `Time: ${log.timestamp}\n\n`;
     });
 
     const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = "login-log.txt";
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(a.href);
   }
 </script>
 
 </body>
 </html>
-
-
