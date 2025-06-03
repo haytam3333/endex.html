@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Login Page</title>
+  <title>Login Page with Protected Log</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,42 +12,70 @@
       align-items: center;
       height: 100vh;
     }
+
     .login-box {
       background: #fff;
       padding: 30px;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      width: 300px;
+      width: 320px;
     }
+
     input {
-      display: block;
       width: 100%;
       padding: 10px;
       margin: 10px 0;
     }
+
     button {
       padding: 10px;
       width: 100%;
+      margin-top: 10px;
       background: #3498db;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
+
     button:hover {
       background: #2980b9;
     }
+
+    .clear-btn { background-color: #e74c3c; }
+    .clear-btn:hover { background-color: #c0392b; }
+
+    .download-btn { background-color: #2ecc71; }
+    .download-btn:hover { background-color: #27ae60; }
+
+    .log-btn { background-color: #9b59b6; }
+    .log-btn:hover { background-color: #8e44ad; }
+
     .message {
       margin-top: 10px;
       font-weight: bold;
     }
-    .log-box {
+
+    .log-list {
+      display: none;
       margin-top: 20px;
-      background: #eee;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #f7f7f7;
+      border: 1px solid #ccc;
       padding: 10px;
       border-radius: 5px;
+    }
+
+    .log-entry {
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #ddd;
       font-size: 14px;
     }
+
+    .success { color: green; }
+    .fail { color: red; }
   </style>
 </head>
 <body>
@@ -59,39 +87,118 @@
   <button onclick="login()">Log In</button>
   <div class="message" id="message"></div>
 
-  <div class="log-box" id="log-box" style="display:none;">
-    <p><strong>Email:</strong> <span id="log-email"></span></p>
-    <p><strong>Password:</strong> <span id="log-password"></span></p>
+  <div class="log-list" id="log-list">
+    <h4>User Login Log:</h4>
+    <!-- Logs will be displayed here -->
   </div>
+
+  <button class="log-btn" onclick="showLogs()">Show Log (Admin)</button>
+  <button class="clear-btn" onclick="clearLog()">Clear Log</button>
+  <button class="download-btn" onclick="downloadLog()">Download Log</button>
 </div>
 
 <script>
+  const correctEmail = "user@example.com";
+  const correctPassword = "123456";
+  const adminPassword = "admin123"; // <- Change this to your secret
+
+  let logsLoaded = false;
+
   function login() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
-    const correctEmail = "user@example.com";
-    const correctPassword = "123456";
+    const isValid = email === correctEmail && password === correctPassword;
+    const status = isValid ? "✅ Success" : "❌ Failed";
+
+    const logEntry = {
+      email,
+      password,
+      status,
+      timestamp: new Date().toLocaleString()
+    };
+
+    let logs = JSON.parse(localStorage.getItem("loginLogs")) || [];
+    logs.push(logEntry);
+    localStorage.setItem("loginLogs", JSON.stringify(logs));
 
     const message = document.getElementById("message");
-    const logBox = document.getElementById("log-box");
+    message.textContent = isValid ? "Login successful!" : "Invalid email or password.";
+    message.className = isValid ? "message success" : "message fail";
 
-    // Show log regardless of success
-    document.getElementById("log-email").textContent = email;
-    document.getElementById("log-password").textContent = password;
-    logBox.style.display = "block";
-
-    if (email === correctEmail && password === correctPassword) {
-      console.log("✅ Login successful");
-      message.style.color = "green";
-      message.textContent = "Login successful!";
-    } else {
-      console.log("❌ Invalid email or password");
-      message.style.color = "red";
-      message.textContent = "Invalid email or password.";
+    if (logsLoaded) {
+      displayLog(logEntry);
     }
+
+    document.getElementById('email').value = "";
+    document.getElementById('password').value = "";
+  }
+
+  function displayLog(entry) {
+    const logList = document.getElementById("log-list");
+    const div = document.createElement("div");
+    div.classList.add("log-entry");
+    div.innerHTML = `
+      <strong>Status:</strong> ${entry.status}<br>
+      <strong>Email:</strong> ${entry.email}<br>
+      <strong>Password:</strong> ${entry.password}<br>
+      <strong>Time:</strong> ${entry.timestamp}
+    `;
+    logList.appendChild(div);
+  }
+
+  function showLogs() {
+    const entered = prompt("Enter admin password to view logs:");
+    if (entered === adminPassword) {
+      const logList = document.getElementById("log-list");
+      logList.style.display = "block";
+      if (!logsLoaded) {
+        const savedLogs = JSON.parse(localStorage.getItem("loginLogs")) || [];
+        savedLogs.forEach(entry => displayLog(entry));
+        logsLoaded = true;
+      }
+    } else {
+      alert("Incorrect password. Access denied.");
+    }
+  }
+
+  function clearLog() {
+    localStorage.removeItem("loginLogs");
+    document.getElementById("log-list").innerHTML = "<h4>User Login Log:</h4>";
+    document.getElementById("message").textContent = "Log cleared.";
+    document.getElementById("message").className = "message";
+    logsLoaded = false;
+    document.getElementById("log-list").style.display = "none";
+  }
+
+  function downloadLog() {
+    const logs = JSON.parse(localStorage.getItem("loginLogs")) || [];
+    if (logs.length === 0) {
+      alert("No log to download.");
+      return;
+    }
+
+    let content = "User Login Log\n\n";
+    logs.forEach((entry, i) => {
+      content += `Entry ${i + 1}:\n`;
+      content += `Status: ${entry.status}\n`;
+      content += `Email: ${entry.email}\n`;
+      content += `Password: ${entry.password}\n`;
+      content += `Time: ${entry.timestamp}\n\n`;
+    });
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "login-log.txt";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 </script>
 
 </body>
 </html>
+
+
